@@ -41,6 +41,7 @@ class Network(nn.Module):
         self.feature_layer = nn.Linear(61,nh)
         self.representation_hidden_layer = nn.Linear(hidden_dimention*2,hidden_dimention*2)
         self.output_layer = nn.Linear(hidden_dimention*2,output_dimention)
+        self.critic_output_layer = nn.Linear(hidden_dimention*2,1)
         self.hidden_size = hidden_dimention
         self.activate = nn.Tanh()
         self.softmax_layer = nn.Softmax()
@@ -86,15 +87,29 @@ class Network(nn.Module):
         return x,xs
     def generate_scores(self,zp_pre,zp_post,np,nps,feature,dropout=0.0):
         dropout_layer = nn.Dropout(dropout)
-        x = self.zp_pre_layer(zp_pre) + self.zp_post_layer(zp_post) + self.np_layer(np) + self.nps_layer(nps)\
+        shared = self.zp_pre_layer(zp_pre) + self.zp_post_layer(zp_post) + self.np_layer(np) + self.nps_layer(nps)\
             + self.feature_layer(feature) 
-        x = self.activate(x)
-        x = dropout_layer(x)
-        x = self.representation_hidden_layer(x)
-        x = self.activate(x)
-        x = dropout_layer(x)
-        x = self.output_layer(x)
-        xs = F.softmax(x)
-        return x,xs
+        x_actor = self.activate(shared)
+        x_actor = dropout_layer(x_actor)
+        x_actor = self.representation_hidden_layer(x_actor)
+        x_actor = self.activate(x_actor)
+        x_actor = dropout_layer(x_actor)
+        x_actor = self.output_layer(x_actor)
+        action_probs = F.softmax(x_actor)
+
+        x_critic = self.activate(shared)
+        x_critic = dropout_layer(x_critic)
+        x_critic = self.representation_hidden_layer(x_critic)
+        x_critic = self.activate(x_critic)
+        x_critic = dropout_layer(x_critic)
+        state_values = self.critic_output_layer(x_critic)
+
+        return x_actor, action_probs, state_values
+
+#    def select_actions_rewards(self,zp_pre,zp_post,np,nps,feature,dropout=0.0):
+#        rewards = self.critic_output_layer(x)
+#        state_values = F.sigmoid(state_values)
+#        actions = np.random.choice(self.mdp.nActions, 1, p=aDist)[0]
+
     def initHidden(self,batch=1):
         return autograd.Variable(torch.from_numpy(numpy.zeros((batch, self.hidden_size))).type(torch.cuda.FloatTensor))

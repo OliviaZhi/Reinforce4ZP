@@ -6,6 +6,7 @@ import math
 import timeit
 import cPickle
 import copy
+import time
 sys.setrecursionlimit(1000000)
 import torch
 import torch.nn as nn
@@ -51,6 +52,10 @@ def main():
     best_model = Network(nnargs["embedding_size"],nnargs["embedding_dimention"],embedding_matrix,nnargs["hidden_dimention"],2).cuda()
     re = evaluate_test(test_generater,model)
     print "Performance on Test Before RL: F",re["f"]
+    prec_list = []
+    rec_list = []
+    f1_list = []
+    f_list = []
     for echo in range(50):
         info = "["+echo*">"+" "*(50-echo)+"]"
         sys.stderr.write(info+"\r")
@@ -122,10 +127,15 @@ def main():
             rewards = rewards - maxs
             rewards = torch.tensor(-1.0*rewards).type(torch.cuda.FloatTensor)
             optimizer.zero_grad()
-            loss = torch.sum( output_softmax*rewards ) 
+            loss = torch.sum((1-output_softmax)**2 * output_softmax * rewards ) 
             loss.backward()
             optimizer.step()
         re = evaluate(train_generater,model)
+	f_list.append(re)
+#        temp = evaluate_test(train_generater, model)
+#        prec_list.append(temp["p"])
+#        rec_list.append(temp["r"])
+#        f1_list.append(temp["f"])
         if re >= best["sum"]:
             mcp = list(best_model.parameters())
             mp = list(model.parameters())
@@ -135,9 +145,18 @@ def main():
 
     print >> sys.stderr
     re = evaluate_test(test_generater,best_model)
-    print "Performance on Test Final: F",re["f"]
+    print "Performance on Test Final: F",re
     torch.save(best_model, "./models/model.final")
     print "Dev",best["sum"]
+
+#    with open("prec_vs_epoch_unmod.txt", "w") as output:
+#        output.write(str(prec_list))
+#    with open("rec_vs_epoch_unmod.txt", "w") as output:
+#        output.write(str(rec_list))
+#    with open("f1_vs_epoch_unmod.txt", "w") as output:
+#        output.write(str(f1_list))
+    with open("f_unmod.txt", "w") as output:
+        output.write(str(f_list))
 
 def evaluate(generater,model):
     pr = []
@@ -267,4 +286,7 @@ def evaluate_test(generater,model):
 
 
 if __name__ == "__main__":
+    start_time = time.time()
     main()
+    print('training time {} seconds'.format(time.time()-start_time))
+
