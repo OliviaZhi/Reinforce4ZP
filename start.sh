@@ -1,2 +1,2 @@
 python pretrain.py
-python rl.py -props ./properties/prob.1
+python rl_AC.py -props ./properties/prob.1
