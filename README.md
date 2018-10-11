@@ -1,5 +1,5 @@
 # Actor-Critic Network in Zero Pronoun Resolution
-Actor-Critic Network is one of the popular method in Reinforcement Learning. I employed the network for solving a NLP problem. The task here is trying to predict the omissible pronouns (i.e. zero-pronoun) in sentences, which will help machine keep track of the semantic meaning during dialogue. This will improve the artificial conversational entities like Siri and other intelligent personal assistants. 
+Actor-Critic Network is one of the popular method in Reinforcement Learning. I employed the network for solving a NLP problem. The task here is trying to predict the omissible pronouns (i.e. zero-pronoun) in sentences, which will help machine keep track of the semantic meaning during conversation. This will improve the artificial conversational entities like Siri and other intelligent personal assistants. 
 
 
 ## The original paper can be found at https://arxiv.org/abs/1806.03711.
