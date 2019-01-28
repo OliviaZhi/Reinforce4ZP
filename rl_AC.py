@@ -66,7 +66,9 @@ def main():
         log_prob_list = []
         rewards_list = []
         entropy_list = []
+        numofdata = 0
         for data in train_generater.generate_data(shuffle=True):
+            numofdata += 1
             zp_rein = torch.tensor(data["zp_rein"]).type(torch.cuda.LongTensor)
             zp_pre = torch.tensor(data["zp_pre"]).type(torch.cuda.LongTensor)
             zp_pre_mask = torch.tensor(data["zp_pre_mask"]).type(torch.cuda.FloatTensor)
@@ -135,15 +137,26 @@ def main():
             pl = lu.tolist()
             for i in range(len(pl)):
                 if lu[i]==1 and gold[i]==-1:
-                    rewards[i] += 2.0
+                    rewards[i] += 20.0
                 if lu[i]==1 and gold[i]==0:
-                    rewards[i] -= 2.0
+                    rewards[i] -= 20.0
                 if lu[i]==0 and gold[i]==-1:
-                    rewards[i] -= 1.0
+                    rewards[i] -= 6.0
                 if lu[i]==0 and gold[i]==0:
-                    rewards[i] += 0.5
+                    rewards[i] += 2.0
 
-            rewards = torch.tensor(-1.0*rewards).type(torch.cuda.FloatTensor)
+#            rewards = torch.tensor(-1.0*rewards).type(torch.cuda.FloatTensor)
+            rewards = -1.0*rewards
+
+#            print(rewards.shape)
+            
+            accRewards = []
+            R = 0
+            for r in rewards[::-1]:
+                R = r + 0.98*R
+                accRewards.insert(0,R)
+            accRewards = torch.tensor(accRewards).type(torch.cuda.FloatTensor)
+
             log_probs = probs.log()
 #	    print(log_probs)
 #	    print(log_probs.shape) 
@@ -151,7 +164,7 @@ def main():
 #	    print(actions)
 #	    print(actions.shape)
             chosen_action_log_probs = log_probs.gather(1,actions)
-            advantages = rewards - state_values
+            advantages = accRewards - state_values
 
             entropies = -(log_probs * probs).sum(1)
             entropy_list.append(entropies)
@@ -172,10 +185,11 @@ def main():
                 mcp[i].data[:] = mp[i].data[:]
             best["sum"] = re
 
-#        temp = evaluate_test(train_generater, model)
-#        prec_list.append(temp["p"])
-#        rec_list.append(temp["r"])
-#        f1_list.append(temp["f"])
+        temp = evaluate_test(test_generater, model)
+        print(temp)
+        prec_list.append(temp["p"])
+        rec_list.append(temp["r"])
+        f1_list.append(temp["f"])
 
 
     print >> sys.stderr
@@ -184,12 +198,12 @@ def main():
     torch.save(best_model, "./models/model.final")
     print "Dev",best["sum"]
 
-#    with open("prec_vs_epoch.txt", "w") as output:
-#        output.write(str(prec_list))
-#    with open("rec_vs_epoch.txt", "w") as output:
-#        output.write(str(rec_list))
-#    with open("f1_vs_epoch.txt", "w") as output:
-#        output.write(str(f1_list))
+    with open("prec_vs_50epoch_rwd202062_lr98.txt", "w") as output:
+        output.write(str(prec_list))
+    with open("rec_vs_50epoch_rwd202062_lr98.txt", "w") as output:
+        output.write(str(rec_list))
+    with open("f1_vs_50epoch_rwd202062_lr98.txt", "w") as output:
+        output.write(str(f1_list))
 
 
 def evaluate(generater,model):
